@@ -18,4 +18,8 @@ AGENT_ID는 Supabase PostgreDB에 저장된 값 사용
 접속정보는 별도 공유
 
 구동순서
-API
+API - uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+Superviser
+나머지 Agent
+
+rabbitmq 로컬 환경 필요
