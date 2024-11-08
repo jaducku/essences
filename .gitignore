@@ -1,2 +1,3 @@
 essenses/*
 config/.env
+services/prompt-enhancer/logs

@@ -19,9 +19,8 @@ class SupervisorAgent:
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_key = os.getenv("SUPABASE_KEY")
         supabase: Client = create_client(supabase_url, supabase_key)
-        
         response = supabase.table('agent_info')\
-            .select('agent_id', 'name', 'desc', 'system_prompt', 'is_superviser')\
+            .select('agent_id', 'name', 'desc', 'system_prompt:enhanced_prompt', 'is_superviser')\
             .eq('is_active', True)\
             .execute()
 
@@ -100,7 +99,7 @@ class SupervisorAgent:
                     request_id = response_data.get('request_id')
                     task_id = response_data.get('task_id')
                     task_result = response_data.get('response')
-
+                    response_queue_name = f'response_{request_id}'
                     if request_id and task_id and task_result:
                         self.requests[request_id][task_id]["status"] = "finish"
                         self.requests[request_id][task_id]["response"] = task_result
@@ -108,7 +107,7 @@ class SupervisorAgent:
 
                         if self.requests[request_id]['remain_task_cnt'] == 0:
                             final_response = self.combine_responses(self.requests[request_id])
-                            await self.send_response_to_queue(final_response, request_id)
+                            await self.send_response_to_queue(final_response, request_id, response_queue_name)
                             del self.requests[request_id]
                 except json.JSONDecodeError:
                     print("Failed to decode response message, skipping.")
@@ -118,7 +117,7 @@ class SupervisorAgent:
         await response_queue.consume(on_message)
         await asyncio.Future()
 
-    async def send_response_to_queue(self, response_data, request_id):
+    async def send_response_to_queue(self, response_data, request_id, queue_name):
         connection = await aio_pika.connect_robust(self.rabbitmq_url)
         channel = await connection.channel()
 
@@ -127,7 +126,7 @@ class SupervisorAgent:
                 body=json.dumps(response_data, ensure_ascii=False).encode('utf-8'),
                 message_id=request_id
             ),
-            routing_key='response_queue'
+            routing_key=queue_name
         )
         print(f"Sent combined response for request: {request_id}")
         await connection.close()

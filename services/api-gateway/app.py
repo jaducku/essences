@@ -11,10 +11,11 @@ load_dotenv("../../config/.env")
 class QueueProcessor:
     def __init__(self):
         self.rabbitmq_url = os.getenv("RABBITMQ_ROBUST")
-
+        self.response_queue ={}
     async def send_task_to_queue(self, data: str, request_id: str):
         connection = await aio_pika.connect_robust(self.rabbitmq_url)
         channel = await connection.channel()
+        self.response_queue = await channel.declare_queue(name=f"response_{request_id}", exclusive=True)
         await channel.default_exchange.publish(
             aio_pika.Message(body=data.encode('utf-8'), message_id=request_id),
             routing_key='request_queue'
@@ -24,7 +25,7 @@ class QueueProcessor:
     async def receive_response_from_queue(self, request_id: str):
         connection = await aio_pika.connect_robust(self.rabbitmq_url)
         channel = await connection.channel()
-        queue = await channel.declare_queue('response_queue')
+        queue = await channel.declare_queue(f"response_{request_id}")
         
         future = asyncio.get_event_loop().create_future()
 
@@ -43,7 +44,7 @@ class QueueProcessor:
         # 응답을 받은 후 채널과 연결을 닫습니다.
         await channel.close()
         await connection.close()
-
+    
         return response
 
 app = FastAPI()
