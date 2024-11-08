@@ -1,0 +1,5 @@
+supabase
+uuid
+json
+pika
+python-dotenv

@@ -1,0 +1,9 @@
+supabase
+uuid
+json
+pika
+python-dotenv
+asyncio
+aio_pika
+dotenv
+openai
