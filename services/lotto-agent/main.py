@@ -15,7 +15,7 @@ class Agent:
     def __init__(self):
         self.rabbitmq_url = os.getenv("RABBITMQ_ROBUST")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.agent_id = os.getenv("AGENT_ID_TRAVEL")
+        self.agent_id = os.getenv("AGENT_ID_LOTTO")
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_key = os.getenv("SUPABASE_KEY")
         
@@ -101,6 +101,7 @@ class Agent:
         # 여러 Task의 응답을 조합하는 로직
         combined = {'combined_responses': responses}
         return combined
+
 
 if __name__ == "__main__":
     agent = Agent()
