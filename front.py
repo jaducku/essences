@@ -6,12 +6,21 @@ import json
 import os
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import asyncio
+import aio_pika
 
 # Load environment variables
 load_dotenv("./config/.env")
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
+rabbitmq_url = os.getenv("RABBITMQ_ROBUST")
+
+def send_agent_info_to_queue(agent_info):
+    pass
+
+
+
 
 # Create tabs
 tab1, tab2 = st.tabs(["Essences", "Agent Registration"])
@@ -20,7 +29,7 @@ with tab1:
     # Fetch agent information from Supabase
     try:
         agent_get = supabase.table('agent_info')\
-            .select('agent_id', 'name')\
+            .select('agent_id', 'name', 'desc','system_prompt', 'enhanced_prompt')\
             .eq('is_superviser', False)\
             .execute()
 
@@ -94,8 +103,9 @@ with tab1:
     for agent in agents:
         agent_id = agent.get("agent_id", "")
         name = agent.get("name", "")
+        desc = agent.get("desc", "")
         st.markdown(f"""
-            - **Name:** <span style='font-size:20px;'>{name}</span>, **Agent ID:** <span style='font-size:20px;'>{agent_id}</span>
+            - **Name:** <span style='font-size:20px;'>{name}</span>, **Agent ID:** <span style='font-size:20px;'>{desc}</span>
         """, unsafe_allow_html=True)
 
 with tab2:
@@ -125,7 +135,7 @@ with tab2:
             # Insert into Supabase
             try:
                 response = supabase.table('agent_info').insert(data).execute()
-
+                send_agent_info_to_queue(data)
             except Exception as e:
                 st.error(f"An error occurred: {e}")
         else:

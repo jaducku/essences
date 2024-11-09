@@ -89,26 +89,73 @@ class Agent:
             print(f"[Agent {self.agent_id}] Error: {e}")
             return "An error occurred while processing your request."
 
-if __name__ == "__main__":
-    load_dotenv("../../config/.env")
-    rabbitmq_url = os.getenv("RABBITMQ_ROBUST")
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
+class AgentManager:
+    def __init__(self):
+        self.rabbitmq_url = os.getenv("RABBITMQ_ROBUST")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
 
-    supabase: Client = create_client(supabase_url, supabase_key)
+        self.supabase: Client = create_client(supabase_url, supabase_key)
+        self.agents = {}  # Dictionary to store running agents
 
-    # Retrieve all agent IDs from the database
-    agent_infos = supabase.table('agent_info').select('agent_id').eq('is_superviser',False).execute()
-    agent_ids = [agent['agent_id'] for agent in agent_infos.data]
+    async def start(self):
+        # Load existing agents from the database
+        await self.load_existing_agents()
+        # Start consuming the agent_info queue to add new agents dynamically
+        await self.consume_agent_info()
 
-    async def main():
-        agents = []
+    async def load_existing_agents(self):
+        print("[AgentManager] Loading existing agents from the database...")
+        agent_infos = self.supabase.table('agent_info').select('agent_id').execute()
+        agent_ids = [agent['agent_id'] for agent in agent_infos.data]
+
         for agent_id in agent_ids:
-            agent = Agent(agent_id, rabbitmq_url, openai_api_key, supabase)
-            agents.append(agent)
+            if agent_id not in self.agents:
+                print(f"[AgentManager] Creating agent with ID: {agent_id}")
+                agent = Agent(
+                    agent_id,
+                    self.rabbitmq_url,
+                    self.openai_api_key,
+                    self.supabase
+                )
+                self.agents[agent_id] = agent
+                # Start the agent in the background
+                asyncio.create_task(agent.start())
+            else:
+                print(f"[AgentManager] Agent {agent_id} already exists.")
 
-        # Start all agents concurrently
-        await asyncio.gather(*(agent.start() for agent in agents))
+    async def consume_agent_info(self):
+        print("[AgentManager] Starting to consume agent_info queue...")
+        connection = await aio_pika.connect_robust(self.rabbitmq_url)
+        channel = await connection.channel()
+        agent_info_queue = await channel.declare_queue('agent_info', durable=True)
 
-    asyncio.run(main())
+        async def on_message(message: aio_pika.IncomingMessage):
+            async with message.process():
+                agent_data = json.loads(message.body.decode())
+                agent_id = agent_data.get('agent_id')
+                if agent_id:
+                    if agent_id not in self.agents:
+                        print(f"[AgentManager] Creating new agent with ID: {agent_id}")
+                        agent = Agent(
+                            agent_id,
+                            self.rabbitmq_url,
+                            self.openai_api_key,
+                            self.supabase
+                        )
+                        self.agents[agent_id] = agent
+                        # Start the agent in the background
+                        asyncio.create_task(agent.start())
+                    else:
+                        print(f"[AgentManager] Agent {agent_id} already exists.")
+                else:
+                    print("[AgentManager] Invalid agent data received.")
+
+        await agent_info_queue.consume(on_message)
+        print("[AgentManager] Started consuming agent_info queue.")
+        await asyncio.Future()  # Keep the coroutine running
+
+if __name__ == "__main__":
+    agent_manager = AgentManager()
+    asyncio.run(agent_manager.start())
