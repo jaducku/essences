@@ -17,9 +17,14 @@ class Agent:
         self.openai_api_key = openai_api_key
         self.agent_id = agent_id
         self.supabase = supabase_client
-
+        '''
         agent_info = self.supabase.table('agent_info')\
             .select('name', 'desc', 'system_prompt:enhanced_prompt')\
+            .eq('agent_id', self.agent_id)\
+            .execute()
+        '''
+        agent_info = self.supabase.table('agent_info')\
+            .select('name', 'desc', 'system_prompt')\
             .eq('agent_id', self.agent_id)\
             .execute()
 
@@ -134,6 +139,7 @@ class AgentManager:
         async def on_message(message: aio_pika.IncomingMessage):
             async with message.process():
                 agent_data = json.loads(message.body.decode())
+                print(agent_data)
                 agent_id = agent_data.get('agent_id')
                 if agent_id:
                     if agent_id not in self.agents:

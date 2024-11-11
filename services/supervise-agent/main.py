@@ -18,8 +18,8 @@ class SupervisorAgent:
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_key = os.getenv("SUPABASE_KEY")
-        supabase: Client = create_client(supabase_url, supabase_key)
-        response = supabase.table('agent_info')\
+        self.supabase: Client = create_client(supabase_url, supabase_key)
+        response = self.supabase.table('agent_info')\
             .select('agent_id', 'name', 'desc', 'system_prompt:enhanced_prompt', 'is_superviser')\
             .eq('is_active', True)\
             .execute()
@@ -38,7 +38,8 @@ class SupervisorAgent:
     async def start(self):
         await asyncio.gather(
             self.consume_requests(),
-            self.consume_task_responses()
+            self.consume_task_responses()#
+            #self.periodic_agent_checker()
         )
 
     async def consume_requests(self):
@@ -179,6 +180,30 @@ class SupervisorAgent:
             print(f"Error analyzing message: {e}")
             return {}
 
+    async def periodic_agent_checker(self):
+        while True:
+            await self.agent_checker()
+            await asyncio.sleep(10)
+
+    async def agent_checker(self):
+        print("update agents")
+        response = self.supabase.table('agent_info')\
+            .select('agent_id', 'name', 'desc', 'system_prompt:enhanced_prompt', 'is_superviser')\
+            .eq('is_active', True)\
+            .execute()
+
+        superviser_data = [record for record in response.data if record.get('is_superviser') == True] if response.data else []
+        self.prompt_template = superviser_data[0].get('system_prompt')
+        self.agent_list = [
+            {
+                'agent_id': record.get('agent_id'),
+                'name': record.get('name'),
+                'desc': record.get('desc')
+            }
+            for record in response.data if record.get('is_superviser') == False
+        ]
+
 if __name__ == "__main__":
     supervisor_agent = SupervisorAgent()
     asyncio.run(supervisor_agent.start())
+    

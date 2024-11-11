@@ -16,11 +16,14 @@ supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 rabbitmq_url = os.getenv("RABBITMQ_ROBUST")
 
-def send_agent_info_to_queue(agent_info):
-    pass
-
-
-
+async def send_agent_info_to_queue(agent_info):
+    connection = await aio_pika.connect_robust(rabbitmq_url)
+    channel = await connection.channel()
+    await channel.default_exchange.publish(
+        aio_pika.Message(body=json.dumps(agent_info, ensure_ascii=False).encode('utf-8')),
+        routing_key='agent_info'
+    )
+    await connection.close()
 
 # Create tabs
 tab1, tab2 = st.tabs(["Essences", "Agent Registration"])
@@ -100,13 +103,16 @@ with tab1:
     # Display available agents
     st.markdown("<hr>", unsafe_allow_html=True)
     st.subheader("사용 가능한 Agent List")
+
     for agent in agents:
         agent_id = agent.get("agent_id", "")
         name = agent.get("name", "")
         desc = agent.get("desc", "")
-        st.markdown(f"""
-            - **Name:** <span style='font-size:20px;'>{name}</span>, **Agent ID:** <span style='font-size:20px;'>{desc}</span>
-        """, unsafe_allow_html=True)
+        prompt = agent.get("system_prompt", "")
+        enhanced_prompt = agent.get("enhanced_prompt", "")
+        with st.expander(f"**Agent:** {name}     **Agent 설명:** {desc}"):
+            st.write(f"**사용자 입력 Prompt:** {prompt}")
+            st.write(f"**사용자 재구성 Prompt:** {enhanced_prompt}")
 
 with tab2:
     st.header("Agent Registration")
@@ -120,22 +126,22 @@ with tab2:
 
     if register_button:
         if agent_name and agent_desc and agent_prompt:
-            # Generate agent_id
-            agent_id = str(uuid.uuid4())
-
+            agent_id = uuid.uuid4()
             # Prepare data to insert
             data = {
-                "agent_id": agent_id,
+                "agent_id": str(agent_id),
                 "name": agent_name,
                 "desc": agent_desc,
                 "system_prompt": agent_prompt,
-                "is_superviser": False
+                "is_superviser": False,
+                "is_active":True
             }
 
             # Insert into Supabase
             try:
                 response = supabase.table('agent_info').insert(data).execute()
-                send_agent_info_to_queue(data)
+                asyncio.run(send_agent_info_to_queue(data)) 
+                
             except Exception as e:
                 st.error(f"An error occurred: {e}")
         else:
