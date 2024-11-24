@@ -1,0 +1,135 @@
+{
+    "agent_name": "Wedding Planner",
+    "agent_pool": {
+                        "invitation": "f80541ed-7dcc-4548-a80b-90cd8b64ed82",
+                        "travel": "758e8e24-5570-43a6-8859-d38ab726c7be",
+                        "weddinghall": "47cab7ce-1cdb-4745-bdd7-54c096481145",
+                        "sdm": "8de3de8c-a632-4f21-ac93-73b20e51c95b",
+                        "stocking": "e18e435e-adc9-4193-9e63-78c2291905df",
+                        "superviser": "98080ac6-30b1-4bd1-8f62-c50ea5729d15",
+                        "residence": "22cab6a7-1783-4f43-8565-6678f16732ce",
+                        "bitman": "6af628e6-e90d-4d8b-b601-212556bea562"
+                    },
+    "test_data": [
+        {
+            "target_agents": ["invitation"],
+            "utterance": "청첩장을 고급스럽고 간결한 디자인으로 150장 제작하고 싶어요. 봉투 디자인까지 포함해서 추천해줄 수 있을까요?",
+            "selected_agents": ["travel", "superviser"]
+        },
+        {
+            "target_agents": ["weddinghall"],
+            "utterance": "내년 봄에 결혼식을 할 예정인데, 서울 지역에서 소규모 웨딩을 할 수 있는 예식장을 찾고 있어요.",
+            "selected_agents": ["residence", "sdm"]
+        },
+        {
+            "target_agents": ["invitation", "weddinghall"],
+            "utterance": "청첩장 제작과 예식장 예약을 동시에 진행하고 싶어요. 청첩장은 세련된 디자인을 원해요.",
+            "selected_agents": ["bitman", "sdm"]
+        },
+        {
+            "target_agents": ["sdm", "travel"],
+            "utterance": "드레스와 메이크업 예약 후 허니문 여행지도 추천 부탁드려요. 일본이나 동남아 지역이 좋겠어요.",
+            "selected_agents": ["invitation", "superviser"]
+        },
+        {
+            "target_agents": ["weddinghall"],
+            "utterance": "예식장을 고르는 데 어려움을 겪고 있어요. 서울에서 뷰가 좋은 예식장을 추천해줄 수 있나요? 가격대도 다양하게 알고 싶어요.",
+            "selected_agents": ["travel", "bitman"]
+        },
+        {
+            "target_agents": ["invitation"],
+            "utterance": "결혼식 초대장을 150장 정도 준비하고 싶어요. 고급스럽고 간결한 디자인을 원하고, 색상은 화이트와 골드 톤으로 맞추고 싶습니다. 봉투 디자인까지 포함해서 추천해줄 수 있을까요?",
+            "selected_agents": ["invitation"]
+        },
+        {
+            "target_agents": ["travel"],
+            "utterance": "허니문 여행지로 유럽을 생각하고 있어요. 이탈리아와 프랑스 중에서 계절별 추천 코스를 알고 싶고, 현지에서 특별한 체험을 할 수 있는 패키지가 있으면 추천해주세요. 비용은 여유가 있지만 효율적으로 쓰고 싶습니다.",
+            "selected_agents": ["travel"]
+        },
+        {
+            "target_agents": ["weddinghall"],
+            "utterance": "내년 봄에 결혼식을 계획 중인데, 서울 지역에서 소규모 웨딩을 할 수 있는 예식장을 찾고 있어요. 최대 50명 정도 초대할 예정이고, 뷰가 좋거나 야외 공간이 있는 장소를 선호해요. 추천 장소가 있나요?",
+            "selected_agents": ["weddinghall"]
+        },
+        {
+            "target_agents": ["sdm"],
+            "utterance": "결혼 준비를 위해 스튜디오 촬영, 드레스 대여, 메이크업을 함께 할 수 있는 패키지를 찾고 있습니다. 각각의 스타일에 맞는 추천을 받고 싶고, 비용과 일정도 상담받고 싶어요.",
+            "selected_agents": ["sdm"]
+        },
+        {
+            "target_agents": ["invitation", "sdm"],
+            "utterance": "청첩장 디자인을 고르면서 웨딩드레스도 함께 준비하고 싶어요. 청첩장은 클래식하고 고급스러운 느낌으로, 드레스는 심플하면서도 우아한 디자인으로 추천 부탁드려요. 시간과 예산을 함께 고려할 수 있을까요?",
+            "selected_agents": ["invitation", "sdm"]
+        },
+        {
+            "target_agents": ["weddinghall", "travel"],
+            "utterance": "예식장을 먼저 예약하고, 이어서 허니문 여행지도 추천받고 싶어요. 예식장은 최대 100명까지 수용할 수 있는 장소를 찾고 있고, 허니문은 아시아 쪽으로 가볍게 다녀오고 싶습니다. 가능하다면 예산 내에서 제안 부탁드려요.",
+            "selected_agents": ["weddinghall", "travel"]
+        },
+        {
+            "target_agents": ["invitation", "weddinghall"],
+            "utterance": "청첩장 제작을 계획하고 있으며, 동시에 결혼식 장소도 알아보고 싶어요. 청첩장은 세련되고 현대적인 디자인을 원하며, 예식장은 교통이 편리한 곳으로 추천해주시면 감사하겠습니다.",
+            "selected_agents": ["invitation", "weddinghall"]
+        },
+        {
+            "target_agents": ["sdm", "travel"],
+            "utterance": "드레스와 메이크업 예약을 먼저 마치고, 이후에 허니문 여행지도 추천받고 싶어요. 드레스는 특별한 날에 맞는 화려한 스타일을 찾고 있으며, 허니문은 한국에서 가까운 일본이나 동남아 지역이 좋겠어요.",
+            "selected_agents": ["sdm", "travel"]
+        },
+        {
+            "target_agents": ["invitation", "travel"],
+            "utterance": "결혼식 초대장과 허니문 여행 계획을 동시에 세우고 싶어요. 청첩장은 고급스러운 느낌으로 만들고 싶고, 허니문은 두바이에서 특별한 경험을 할 수 있는 코스를 추천받고 싶어요.",
+            "selected_agents": ["invitation", "travel"]
+        },
+        {
+            "target_agents": ["weddinghall", "sdm"],
+            "utterance": "예식장 예약과 드레스 선택을 함께 진행하고 싶어요. 예식장은 소규모로 할 수 있는 곳을 찾고 있고, 드레스는 클래식한 스타일이었으면 해요. 각각의 비용도 알려주세요.",
+            "selected_agents": ["weddinghall", "sdm"]
+        },
+        {
+            "target_agents": ["invitation", "weddinghall", "sdm"],
+            "utterance": "청첩장 디자인, 예식장 예약, 드레스 선택까지 한꺼번에 진행하고 싶어요. 청첩장은 심플하고 우아한 스타일로, 예식장은 강남 근처로 알아봐주세요. 드레스는 현대적인 느낌이었으면 좋겠습니다.",
+            "selected_agents": ["invitation", "weddinghall", "sdm"]
+        },
+        {
+            "target_agents": ["invitation", "weddinghall", "travel"],
+            "utterance": "청첩장과 예식장 예약, 그리고 허니문 여행지 추천을 동시에 받고 싶어요. 청첩장은 전통적인 느낌으로, 예식장은 뷰가 좋은 곳으로, 허니문은 유럽에서 특별한 체험을 할 수 있는 장소로 추천해주세요.",
+            "selected_agents": ["invitation", "weddinghall", "travel"]
+        },
+        {
+            "target_agents": ["travel", "sdm", "weddinghall"],
+            "utterance": "결혼 준비로 예식장 예약과 드레스, 메이크업 패키지를 먼저 확인하고 싶어요. 그 후 허니문 여행지를 추천받고 싶은데, 아시아 쪽으로 조용한 곳이면 좋겠어요.",
+            "selected_agents": ["travel", "sdm", "weddinghall"]
+        },
+        {
+            "target_agents": ["invitation", "travel", "sdm", "weddinghall"],
+            "utterance": "청첩장, 허니문 여행, 드레스와 예식장 예약까지 한꺼번에 계획 중이에요. 청첩장은 간결하게, 예식장은 야외 장소로, 드레스는 볼륨감 있는 스타일로 추천해주세요.",
+            "selected_agents": ["invitation", "travel", "sdm", "weddinghall"]
+        },
+        {
+            "target_agents": ["invitation", "sdm", "travel"],
+            "utterance": "청첩장과 드레스 예약을 마친 후, 허니문 추천을 받고 싶어요. 청첩장은 고급스럽고 심플한 디자인으로, 드레스는 미니멀한 스타일로 부탁드려요. 허니문은 몰디브를 생각 중입니다.",
+            "selected_agents": ["invitation", "sdm", "travel"]
+        },
+        {
+            "target_agents": ["weddinghall"],
+            "utterance": "예식장을 고르는 데 어려움을 겪고 있어요. 서울에서 뷰가 좋은 예식장을 추천해줄 수 있나요? 가격대도 다양하게 알고 싶어요.",
+            "selected_agents": ["weddinghall"]
+        },
+        {
+            "target_agents": ["invitation"],
+            "utterance": "청첩장을 준비하고 있는데, 모던하면서도 고급스러운 스타일의 추천을 받고 싶어요. 또한, 봉투와 함께 패키지로 진행할 수 있는지도 궁금해요.",
+            "selected_agents": ["invitation"]
+        },
+        {
+            "target_agents": ["sdm"],
+            "utterance": "결혼식 메이크업 예약을 하고 싶어요. 내 피부 톤에 맞는 메이크업 스타일을 추천받고 싶은데, 가능할까요?",
+            "selected_agents": ["sdm"]
+        },
+        {
+            "target_agents": ["travel"],
+            "utterance": "결혼 후 허니문 여행지로 괌을 고려 중인데, 로맨틱한 숙소와 특별한 액티비티가 포함된 패키지로 추천해주실 수 있나요?",
+            "selected_agents": ["travel"]
+        }
+    ]
+}

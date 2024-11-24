@@ -1,146 +1,87 @@
 import textgrad as tg
 import os
+import json
+import asyncio
 from dotenv import load_dotenv
-load_dotenv("../../config/.env")
-
-os.environ['OPENAI_API_KEY'] # API 키 공란으로 올립니다
-tg.set_backward_engine("gpt-4o")   # gpt-4 / gpt-4o 쓰시면 될 것 같아요
-
 from supabase import create_client, Client
+import aio_pika
 
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(supabase_url, supabase_key)
+class AgentUpdater:
+    def __init__(self):
+        # 환경 변수 로드
+        load_dotenv("../../config/.env")
+        self.rabbitmq_host = os.getenv("RABBITMQ_ROBUST")
+        # Supabase 클라이언트 설정
+        self.supabase_url = os.getenv("SUPABASE_URL")
+        self.supabase_key = os.getenv("SUPABASE_KEY")
+        self.supabase: Client = create_client(self.supabase_url, self.supabase_key)
 
-response = supabase.table('agent_info')\
-    .select('agent_id','system_prompt','name')\
-    .eq('is_active', True)\
-    .execute()
+        # Textgrad 최적화 엔진 설정
+        tg.set_backward_engine("gpt-4o")  # gpt-4 / gpt-4o 사용 가능
 
-agents = response.data
+    async def optimize_and_update_agent(self, agent):
+        print('start enhancing prompt...')
+        agent_id = agent["agent_id"]
 
-optimized_prompts = {}
+        prompt_variable = tg.Variable(
+            agent['system_prompt'],
+            role_description=f"Multi-Agent 시스템의 {agent['name']} 프롬프트",
+            requires_grad=True
+        )
 
-for agent in agents:
-    agent_id=agent["agent_id"]
+        # 손실 함수 정의
+        evaluation_instruction = (
+            "이 시스템 프롬프트를 평가하세요. "
+            "프롬프트가 명확하고, 구체적이며, 해당 작업에 적합한지 확인하세요."
+        )
+        loss_fn = tg.TextLoss(evaluation_instruction)
 
-    prompt_variable = tg.Variable(
-        agent['system_prompt'],
-        role_description=f"Multi-Agent 시스템의 {agent['name']} 프롬프트",
-        requires_grad=True
-    )
+        # Optimizer 설정
+        optimizer = tg.TGD(parameters=[prompt_variable])
 
-    # 손실 함수를 정의합니다. 여기서는 프롬프트의 품질을 평가하는 지시문을 사용합니다.
-    evaluation_instruction = (
-        "이 시스템 프롬프트를 평가하세요."
-        "프롬프트가 명확하고, 구체적이며, 해당 작업에 적합한지 확인하세요."
-    )
-    loss_fn = tg.TextLoss(evaluation_instruction)
+        for step in range(1):  # 반복 횟수 조정 가능
+            loss = loss_fn(prompt_variable)
+            loss.backward()
+            optimizer.step()
 
-    # Optimizer 설정
-    optimizer = tg.TGD(parameters=[prompt_variable])
+        # 최적화된 프롬프트 결과 저장
+        optimized_prompt = prompt_variable.value
+        update_data = {
+            "enhanced_prompt": optimized_prompt
+        }
 
-    for step in range(1):  # 여러번 할수록 성능이 좋아질 수도??
-        # 손실 계산.
-        loss = loss_fn(prompt_variable)
-        # print("loss: ", loss) => 여기 찍어봐도 의미있는 결과 나옵니다.
+        # Supabase에 업데이트
+        response = (
+            self.supabase
+            .table("agent_info")
+            .update(update_data)
+            .eq("agent_id", agent_id)
+            .execute()
+        )
+        print('Enhancing prompt complate...')
+        return response
 
-        loss.backward()
-        optimizer.step()
+    async def process_message(self, message: aio_pika.IncomingMessage):
+        async with message.process():
+            # 메시지 가져오기
+            agent_info = json.loads(message.body.decode())
+            print(agent_info)
 
-    # 결과 저장
-    optimized_prompts[agent['name']] = prompt_variable.value
+            # 비동기 최적화 및 업데이트 수행
+            await self.optimize_and_update_agent(agent_info)
 
-    update_data = {
-        "agent_id":agent_id,
-        "enhanced_prompt": prompt_variable.value  # 업데이트할 컬럼과 값
-    }
+    async def consume_queue(self):
+        connection = await aio_pika.connect_robust(self.rabbitmq_host)
+        async with connection:
+            channel = await connection.channel()
+            queue = await channel.declare_queue("agent_insert")
 
-    # 조건에 맞는 데이터 업데이트
-    response = (
-        supabase
-        .table("agent_info")  # 테이블 이름
-        .update(update_data)  # 업데이트할 데이터
-        .eq("agent_id", agent_id)  # 특정 조건, 예를 들어 id가 특정 값인 경우
-        .execute()
-    )
+            # 메시지 소비
+            await queue.consume(self.process_message)
+            print("Consuming messages from 'agent_insert' queue")
 
-    
+            await asyncio.Future()  # 큐 소비를 계속 유지
 
-
-
-for agent_name, optimized_prompt in optimized_prompts.items():
-    print(f"{agent_name}의 최적화된 프롬프트:\n{optimized_prompt}\n")
-    print("=====================================================")
-
-'''
-# 시스템 프롬프트 정의
-before_supervisor_prompt ="""세션 ID: {session_id}
-사용자 문의: {user_input}
-위 문의에서 사용자의 의도를 파악하고 다음 중 하나 또는 여러 개로 분류하세요:
-{roles}
-각 의도에 필요한 추가 정보를 추출하세요 (예: 날짜, 목적지 등).
-결과를 JSON 형식으로 반환하세요. 예:
-{{
-  "intents": ["항공권", "호텔"],
-  "정보": {{
-    "항공권 예약": {{"날짜": "2023-10-20", "출발지": "서울", "도착지": "뉴욕"}},
-    "호텔 예약": {{"체크인 날짜": "2023-10-21", "체크아웃 날짜": "2023-10-25", "위치": "뉴욕"}}
-  }}
-}}
-Answer in the following language : Korean"""
-
-before_agent1_prompt="""세션 ID: {session_id}
-사용자 문의: {user_input}
-위 요청에 대하여 사용자에게 엑티비티가 예약되었다는 메시지와 함께 예약된 엑티비티 정보를 전달해주세요.
-Answer in the following language : Korean"""
-
-before_agent2_prompt="""세션 ID: {session_id}
-사용자 문의: {user_input}
-위 요청에 대하여 사용자에게 항공권이 예약되었다는 메시지와 함께 탑승 정보를 전달해주세요.
-Answer in the following language : Korean"""
-
-
-### 효율화하고 싶은 프롬프트 선언
-system_prompts = [
-    {"name": "Supervisor", "prompt": before_supervisor_prompt},
-    {"name": "Activity", "prompt": before_agent1_prompt},
-    {"name": "AirlineTicket", "prompt": before_agent2_prompt}
-
-]
-
-optimized_prompts = {}
-
-for prompt in system_prompts:
-    prompt_variable = tg.Variable(
-        prompt['prompt'],
-        role_description=f"Multi-Agent 시스템의 {prompt['name']} 프롬프트",
-        requires_grad=True
-    )
-
-    # 손실 함수를 정의합니다. 여기서는 프롬프트의 품질을 평가하는 지시문을 사용합니다.
-    evaluation_instruction = (
-        "이 시스템 프롬프트를 평가하세요."
-        "프롬프트가 명확하고, 구체적이며, 해당 작업에 적합한지 확인하세요."
-    )
-    loss_fn = tg.TextLoss(evaluation_instruction)
-
-    # Optimizer 설정
-    optimizer = tg.TGD(parameters=[prompt_variable])
-
-    for step in range(1):  # 여러번 할수록 성능이 좋아질 수도??
-        # 손실 계산.
-        loss = loss_fn(prompt_variable)
-        # print("loss: ", loss) => 여기 찍어봐도 의미있는 결과 나옵니다.
-
-        loss.backward()
-        optimizer.step()
-
-    # 결과 저장
-    optimized_prompts[prompt['name']] = prompt_variable.value
-
-for agent_name, optimized_prompt in optimized_prompts.items():
-    print(f"{agent_name}의 최적화된 프롬프트:\n{optimized_prompt}\n")
-    print("=====================================================")
-
-    '''
+if __name__ == "__main__":
+    agent_updater = AgentUpdater()
+    asyncio.run(agent_updater.consume_queue())

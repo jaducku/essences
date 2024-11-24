@@ -44,7 +44,6 @@ class QueueProcessor:
         # 응답을 받은 후 채널과 연결을 닫습니다.
         await channel.close()
         await connection.close()
-    
         return response
 
 app = FastAPI()

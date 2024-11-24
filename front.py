@@ -25,6 +25,15 @@ async def send_agent_info_to_queue(agent_info):
     )
     await connection.close()
 
+async def send_agent_insert_to_queue(agent_info):
+    connection = await aio_pika.connect_robust(rabbitmq_url)
+    channel = await connection.channel()
+    await channel.default_exchange.publish(
+        aio_pika.Message(body=json.dumps(agent_info, ensure_ascii=False).encode('utf-8')),
+        routing_key='agent_insert'
+    )
+    await connection.close()
+
 # Create tabs
 tab1, tab2 = st.tabs(["Essences", "Agent Registration"])
 
@@ -46,6 +55,7 @@ with tab1:
 
     # Input field for user requests within a form
     with st.form(key='request_form'):
+
         user_input = st.text_input("요청을 입력하세요:")
         submit_button = st.form_submit_button("전송")
 
@@ -73,6 +83,11 @@ with tab1:
                 if isinstance(res, str):
                     res = json.loads(res)
 
+                if res ==[]:
+                    agent_list = []
+                    response_text = res.get("response", "")
+
+
                 agent_list = res.get("agent_list", [])
                 response_text = res.get("response", "")
 
@@ -82,13 +97,14 @@ with tab1:
                     for ag in agents:
                         if ag.get("agent_id", "") == agent:
                             st.markdown(f"""
-                                <span style='font-size:24px; color:red;'>{ag.get("name", "")}</span>
+                                <span style='font-size:35px; color:red;'>{ag.get("name", "")}</span>
                             """, unsafe_allow_html=True)
 
                 # Display response as Markdown
                 st.subheader("Response")
-                st.markdown(res.get("response", ""), unsafe_allow_html=True)
-
+                st.markdown(f"""
+                                <span style='font-size:35px;'>{str(res.get("response", ""))}</span>
+                            """, unsafe_allow_html=True)
             except requests.exceptions.HTTPError as errh:
                 st.error(f"HTTP 에러가 발생했습니다: {errh}")
             except requests.exceptions.ConnectionError as errc:
@@ -112,7 +128,7 @@ with tab1:
         enhanced_prompt = agent.get("enhanced_prompt", "")
         with st.expander(f"**Agent:** {name}     **Agent 설명:** {desc}"):
             st.write(f"**사용자 입력 Prompt:** {prompt}")
-            st.write(f"**사용자 재구성 Prompt:** {enhanced_prompt}")
+            st.write(f"**Enhanced Prompt:** {enhanced_prompt}")
 
 with tab2:
     st.header("Agent Registration")
@@ -140,7 +156,8 @@ with tab2:
             # Insert into Supabase
             try:
                 response = supabase.table('agent_info').insert(data).execute()
-                asyncio.run(send_agent_info_to_queue(data)) 
+                asyncio.run(send_agent_info_to_queue(data))
+                asyncio.run(send_agent_insert_to_queue(data)) 
                 
             except Exception as e:
                 st.error(f"An error occurred: {e}")

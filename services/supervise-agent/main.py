@@ -20,7 +20,7 @@ class SupervisorAgent:
         supabase_key = os.getenv("SUPABASE_KEY")
         self.supabase: Client = create_client(supabase_url, supabase_key)
         response = self.supabase.table('agent_info')\
-            .select('agent_id', 'name', 'desc', 'system_prompt:enhanced_prompt', 'is_superviser')\
+            .select('agent_id', 'name', 'desc', 'system_prompt', 'is_superviser')\
             .eq('is_active', True)\
             .execute()
 
@@ -38,8 +38,8 @@ class SupervisorAgent:
     async def start(self):
         await asyncio.gather(
             self.consume_requests(),
-            self.consume_task_responses()#
-            #self.periodic_agent_checker()
+            self.consume_task_responses(),
+            self.periodic_agent_checker()
         )
 
     async def consume_requests(self):
@@ -64,7 +64,11 @@ class SupervisorAgent:
 
                         tasks = self.intent_analysis_and_split(request_data)
                         self.requests[request_id] = {"remain_task_cnt": len(tasks)}
-                        
+                        print(tasks)
+                        if tasks == []:
+                            await self.send_response_to_queue({"agent_list": [], "response": "죄송합니다. 저는 해당 기능이 아직 없어요 ㅠㅠ"}, request_id, f'response_{request_id}')
+                            del self.requests[request_id]
+
                         for task in tasks:
                             task_id = str(uuid.uuid4())
                             task['task_id'] = task_id
@@ -107,8 +111,7 @@ class SupervisorAgent:
                         self.requests[request_id]['remain_task_cnt'] -= 1
 
                         if self.requests[request_id]['remain_task_cnt'] == 0:
-                            final_response = self.combine_responses(self.requests[request_id])
-                            await self.send_response_to_queue(final_response, request_id, response_queue_name)
+                            await self.send_response_to_queue(self.combine_responses(self.requests[request_id]), request_id, response_queue_name)
                             del self.requests[request_id]
                 except json.JSONDecodeError:
                     print("Failed to decode response message, skipping.")
@@ -169,7 +172,7 @@ class SupervisorAgent:
             completion = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": "너는 여러 Agent가 보낸 답변을 요약하고 체계적으로 정리하는 agent야. 주어진 배열 데이터를 보고 깔끔하게 정리해줘. 불필요한 말은 삼가해"},
+                    {"role": "system", "content": "너는 여러 Agent가 보낸 답변을 요약하고 체계적으로 정리하는 agent야. 주어진 배열 데이터를 보고 깔끔하게 정리해줘. 사용자 입력에 데이터가 없으면 기능이 없다고 공손하게 대답해. 불필요한 말은 삼가해"},
                     {"role": "user", "content": query}
                 ]
             )
